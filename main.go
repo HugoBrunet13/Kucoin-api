@@ -14,6 +14,7 @@ import (
 var session *kucoin.ApiService
 
 func placeOrder(symbol string, side string, orderType string, size string, price string, delay bool) (string, error) {
+	log.Printf("PlaceOrder: Sym: %s Side: %s Type: %s Size %s Price: %s Delay: %t", symbol, side, orderType, size, price, delay)
 	params := &kucoin.CreateOrderModel{
 		ClientOid: kucoin.IntToString(time.Now().UnixNano()),
 		Side:      side,
@@ -30,7 +31,7 @@ func placeOrder(symbol string, side string, orderType string, size string, price
 		for {
 			now := time.Now()
 			nowS := now.Format("2006-01-02 15:04:05")
-			log.Printf("Now: %s - Target: %s", nowS, targetTime)
+			log.Printf("Wait....")
 			if nowS >= targetTime {
 				break
 			}
@@ -81,98 +82,44 @@ func init() {
 
 func main() {
 
-	order1, err := placeOrder("SHIB-USDT", "sell", "limit", "10000", "0.0001", false)
+	// BUY --> Delay
+	buyOrder, err := placeOrder("SHIB-USDT", "sell", "limit", "10000", "0.0001", true)
 	if err != nil {
 		log.Printf("Failed to place order: %s", err)
 	} else {
-		log.Printf("Order placed! Order-id: %s", order1)
+		log.Printf("Order placed! Order-id: %s", buyOrder)
 	}
-	// //Sell 1
-	// paramsOrder2 := &kucoin.CreateOrderModel{
-	// 	ClientOid: order_2,
-	// 	Side:      "sell",
-	// 	Symbol:    "CERE-USDT",
-	// 	Type:      "limit",
-	// 	Size:      "500",
-	// 	Price:     "0.4",
-	// }
-	// _, errOrder2 := session.CreateOrder(paramsOrder2)
-	// if errOrder2 != nil {
-	// 	log.Printf("Error: %s", err)
-	// 	// return
-	// }
-	// // osOrder2 := kucoin.OrdersModel{}
-	// // _errOrder2 := rspOrder2.ReadData(&osOrder2)
-	// // if _errOrder2 != nil {
-	// // 	log.Printf("Error: %s", _errOrder2)
-	// // 	return
-	// // }
-	// // log.Printf("Res %s", rspOrder2)
 
-	// //Sell 2
-	// paramsOrder3 := &kucoin.CreateOrderModel{
-	// 	ClientOid: order_3,
-	// 	Side:      "sell",
-	// 	Symbol:    "CERE-USDT",
-	// 	Type:      "limit",
-	// 	Size:      "500",
-	// 	Price:     "0.8",
-	// }
-	// _, errOrder3 := session.CreateOrder(paramsOrder3)
-	// if errOrder3 != nil {
-	// 	log.Printf("Error: %s", errOrder3)
-	// 	// return
-	// }
-	// // osOrder3 := kucoin.OrdersModel{}
-	// // _errOrder3 := rspOrder3.ReadData(&osOrder3)
-	// // if _errOrder3 != nil {
-	// // 	log.Printf("Error: %s", _errOrder3)
-	// // 	return
-	// // }
-	// // log.Printf("Res %s", rspOrder3)
+	//SELL 1
+	sellOrder1, err := placeOrder("SHIB-USDT", "sell", "limit", "10000", "0.0001", false)
+	if err != nil {
+		log.Printf("Failed to place order: %s", err)
+	} else {
+		log.Printf("Order placed! Order-id: %s", sellOrder1)
+	}
 
-	// //Sell 3
-	// paramsOrder4 := &kucoin.CreateOrderModel{
-	// 	ClientOid: order_4,
-	// 	Side:      "sell",
-	// 	Symbol:    "CERE-USDT",
-	// 	Type:      "limit",
-	// 	Size:      "500",
-	// 	Price:     "1.5",
-	// }
-	// _, errOrder4 := session.CreateOrder(paramsOrder4)
-	// if errOrder4 != nil {
-	// 	log.Printf("Error: %s", errOrder4)
-	// 	// return
-	// }
-	// // osOrder4 := kucoin.OrdersModel{}
-	// // _errOrder4 := rspOrder4.ReadData(&osOrder4)
-	// // if _errOrder4 != nil {
-	// // 	log.Printf("Error: %s", _errOrder4)
-	// // 	return
-	// // }
-	// // log.Printf("Res %s", rspOrder4)
+	// SELL 2
+	sellOrder2, err := placeOrder("SHIB-USDT", "sell", "limit", "10000", "0.0001", false)
+	if err != nil {
+		log.Printf("Failed to place order: %s", err)
+	} else {
+		log.Printf("Order placed! Order-id: %s", sellOrder2)
+	}
 
-	// //Sell 4
-	// paramsOrder5 := &kucoin.CreateOrderModel{
-	// 	ClientOid: order_5,
-	// 	Side:      "sell",
-	// 	Symbol:    "CERE-USDT",
-	// 	Type:      "limit",
-	// 	Size:      "500",
-	// 	Price:     "3",
-	// }
-	// _, errOrder5 := session.CreateOrder(paramsOrder5)
-	// if errOrder5 != nil {
-	// 	log.Printf("Error: %s", errOrder5)
-	// 	// return
-	// }
-	// // osOrder5 := kucoin.OrdersModel{}
-	// // _errOrder5 := rspOrder5.ReadData(&osOrder5)
-	// // if _errOrder5 != nil {
-	// // 	log.Printf("Error: %s", _errOrder5)
-	// // 	return
-	// // }
-	// // log.Printf("Res %s", rspOrder5)
+	// SELL 3
+	sellOrder3, err := placeOrder("SHIB-USDT", "sell", "limit", "10000", "0.0001", false)
+	if err != nil {
+		log.Printf("Failed to place order: %s", err)
+	} else {
+		log.Printf("Order placed! Order-id: %s", sellOrder3)
+	}
+
+	// SELL 4
+	sellOrder4, err := placeOrder("SHIB-USDT", "sell", "limit", "10000", "0.0001", false)
+	if err != nil {
+		log.Printf("Failed to place order: %s", err)
+	} else {
+		log.Printf("Order placed! Order-id: %s", sellOrder4)
+	}
 
 }
