@@ -11,27 +11,11 @@ import (
 	"github.com/spf13/viper"
 )
 
-var order_1 = "O-00032"
+var session *kucoin.ApiService
 
-// var order_2 = "O-0021"
-// var order_3 = "O-0022"
-// var order_4 = "O-0023"
-// var order_5 = "O-0024"
-
-func loadConfig(config_path string) {
-	log.Printf("load_config config_path=%v\n", config_path)
-	viper.SetConfigName(config_path)
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")
-	err := viper.ReadInConfig()
-	if err != nil {
-		log.Printf("Fatal error config file: %s\n", err)
-	}
-}
-
-func placeOrder(orderId string, symbol string, side string, orderType string, size string, price string, delay bool) (string, error) {
+func placeOrder(symbol string, side string, orderType string, size string, price string, delay bool) (string, error) {
 	params := &kucoin.CreateOrderModel{
-		ClientOid: orderId,
+		ClientOid: kucoin.IntToString(time.Now().UnixNano()),
 		Side:      side,
 		Symbol:    symbol,
 		Type:      orderType,
@@ -55,21 +39,28 @@ func placeOrder(orderId string, symbol string, side string, orderType string, si
 
 	rsp, err := session.CreateOrder(params)
 	if err != nil {
-		log.Printf("Error1: %s", err)
 		return "", err
 	}
-	os := kucoin.OrderModel{}
-	err2 := rsp.ReadData(&os)
-	if err2 != nil {
-		log.Printf("Error2: %s", err2)
-		return "", err2
+
+	orderResult := &kucoin.CreateOrderResultModel{}
+	errParse := rsp.ReadData(orderResult)
+	if errParse != nil {
+		return "", errParse
 	}
-	log.Printf("Res %s", rsp)
-	return rsp.Code, nil
+	return orderResult.OrderId, nil
 
 }
 
-var session *kucoin.ApiService
+func loadConfig(config_path string) {
+	log.Printf("load_config config_path=%v\n", config_path)
+	viper.SetConfigName(config_path)
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath(".")
+	err := viper.ReadInConfig()
+	if err != nil {
+		log.Printf("Fatal error config file: %s\n", err)
+	}
+}
 
 func init() {
 	var config_path string
@@ -90,7 +81,7 @@ func init() {
 
 func main() {
 
-	order1, err := placeOrder(order_1, "SHIB-USDT", "sell", "limit", "10000", "0.0001", false)
+	order1, err := placeOrder("SHIB-USDT", "sell", "limit", "10000", "0.0001", false)
 	if err != nil {
 		log.Printf("Failed to place order: %s", err)
 	} else {
