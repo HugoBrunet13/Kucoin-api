@@ -83,7 +83,7 @@ func init() {
 func main() {
 
 	// BUY --> Delay
-	buyOrder, err := placeOrder("SHIB-USDT", "sell", "limit", "10000", "0.0001", true)
+	buyOrder, err := placeOrder("SHIB-USDT", "buy", "limit", "10000", "0.0001", true)
 	if err != nil {
 		log.Printf("Failed to place order: %s", err)
 	} else {
