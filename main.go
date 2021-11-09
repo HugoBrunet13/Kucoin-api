@@ -4,6 +4,7 @@ import (
 	// "io"
 	"flag"
 	"log"
+	"strconv"
 	"time"
 
 	// "net/http"
@@ -12,6 +13,39 @@ import (
 )
 
 var session *kucoin.ApiService
+
+func getBuyPrice(bidLevel int64, orderbook *kucoin.PartOrderBookModel) string {
+	if len(orderbook.Bids) == 0 {
+		return ""
+	}
+	if len(orderbook.Bids) > int(bidLevel) {
+		return orderbook.Bids[len(orderbook.Bids)-1][0]
+	}
+	return orderbook.Bids[bidLevel][0]
+}
+
+func getOrderbook(symbol string, depth int64) (*kucoin.PartOrderBookModel, error) {
+	rsp, err := session.AggregatedPartOrderBook(symbol, depth)
+	if err != nil {
+		return nil, err
+	}
+	c := &kucoin.PartOrderBookModel{}
+	if err := rsp.ReadData(c); err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+func wait(startTime string) {
+	for {
+		now := time.Now()
+		nowS := now.Format("2006-01-02 15:04:05")
+		log.Printf("Wait....")
+		if nowS >= startTime {
+			break
+		}
+	}
+}
 
 func placeOrder(symbol string, side string, orderType string, size string, price string, delay bool) (string, error) {
 	log.Printf("PlaceOrder: Sym: %s Side: %s Type: %s Size %s Price: %s Delay: %t", symbol, side, orderType, size, price, delay)
@@ -82,8 +116,30 @@ func init() {
 
 func main() {
 
+	// 1. Wait until market open
+	startTime := viper.GetString("targetTime")
+	wait(startTime)
+
+	// 2. Get orderbook
+	orderbook, err := getOrderbook("SHIB-USDT", 20)
+	if err != nil {
+		log.Printf("ERROR: %s", err)
+	}
+
+	// 3. Get buy price from orderbook
+	buyPrice := getBuyPrice(10, orderbook)
+
+	// 4. If buy price is null, use default price
+	if buyPrice == "" {
+		buyPrice = "0.0005" // XXXX
+	}
+
+	// Compute Buy Qty (need to have price in float not as string)
+	buyPriceFloat, err := strconv.ParseFloat(buyPrice, 32)
+	buyQty := 200 / buyPriceFloat
+
 	// BUY --> Delay
-	buyOrder, err := placeOrder("SHIB-USDT", "buy", "limit", "10000", "0.0001", true)
+	buyOrder, err := placeOrder("SHIB-USDT", "buy", "limit", buyQty.toString(), buyPrice, true)
 	if err != nil {
 		log.Printf("Failed to place order: %s", err)
 	} else {
