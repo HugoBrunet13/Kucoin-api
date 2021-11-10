@@ -62,14 +62,7 @@ func placeOrder(symbol string, side string, orderType string, size string, price
 
 	if delay {
 		targetTime := viper.GetString("targetTime")
-		for {
-			now := time.Now()
-			nowS := now.Format("2006-01-02 15:04:05")
-			log.Printf("Wait....")
-			if nowS >= targetTime {
-				break
-			}
-		}
+		wait(targetTime)
 	}
 
 	rsp, err := session.CreateOrder(params)
