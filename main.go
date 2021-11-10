@@ -14,14 +14,14 @@ import (
 
 var session *kucoin.ApiService
 
-func getBuyPrice(bidLevel int64, orderbook *kucoin.PartOrderBookModel) string {
-	if len(orderbook.Bids) == 0 {
+func getBuyPrice(askLevel int64, orderbook *kucoin.PartOrderBookModel) string {
+	if len(orderbook.Asks) == 0 {
 		return ""
 	}
-	if len(orderbook.Bids) > int(bidLevel) {
+	if len(orderbook.Asks) > int(askLevel) {
 		return orderbook.Bids[len(orderbook.Bids)-1][0]
 	}
-	return orderbook.Bids[bidLevel][0]
+	return orderbook.Bids[askLevel][0]
 }
 
 func getOrderbook(symbol string, depth int64) (*kucoin.PartOrderBookModel, error) {
@@ -109,12 +109,15 @@ func init() {
 
 func main() {
 
+	SYMBOL := "SHIB-USDT" // XXX Put in config?
+	// TYPE := "limmit"
+
 	// 1. Wait until market open
 	startTime := viper.GetString("targetTime")
 	wait(startTime)
 
 	// 2. Get orderbook
-	orderbook, err := getOrderbook("SHIB-USDT", 20)
+	orderbook, err := getOrderbook(SYMBOL, 20)
 	if err != nil {
 		log.Printf("ERROR: %s", err)
 	}
@@ -137,7 +140,7 @@ func main() {
 
 	/**
 	// BUY --> Delay
-	buyOrder, err := placeOrder("SHIB-USDT", "buy", "limit", buyQty.toString(), buyPrice, true)
+	buyOrder, err := placeOrder(SYMBOL, "buy", TYPE, buyQty.toString(), buyPrice, true)
 	if err != nil {
 		log.Printf("Failed to place order: %s", err)
 	} else {
@@ -147,7 +150,7 @@ func main() {
 	//Derive BUY price and BUY quantity to get Sell price and Sell quantity
 
 	//SELL 1
-	sellOrder1, err := placeOrder("SHIB-USDT", "sell", "limit", "10000", "0.0001", false)
+	sellOrder1, err := placeOrder(SYMBOL, "sell", TYPE, "10000", "0.0001", false)
 	if err != nil {
 		log.Printf("Failed to place order: %s", err)
 	} else {
@@ -155,7 +158,7 @@ func main() {
 	}
 
 	// SELL 2
-	sellOrder2, err := placeOrder("SHIB-USDT", "sell", "limit", "10000", "0.0001", false)
+	sellOrder2, err := placeOrder(SYMBOL, "sell", TYPE, "10000", "0.0001", false)
 	if err != nil {
 		log.Printf("Failed to place order: %s", err)
 	} else {
@@ -163,7 +166,7 @@ func main() {
 	}
 
 	// SELL 3
-	sellOrder3, err := placeOrder("SHIB-USDT", "sell", "limit", "10000", "0.0001", false)
+	sellOrder3, err := placeOrder(SYMBOL, "sell", TYPE, "10000", "0.0001", false)
 	if err != nil {
 		log.Printf("Failed to place order: %s", err)
 	} else {
@@ -171,7 +174,7 @@ func main() {
 	}
 
 	// SELL 4
-	sellOrder4, err := placeOrder("SHIB-USDT", "sell", "limit", "10000", "0.0001", false)
+	sellOrder4, err := placeOrder(SYMBOL, "sell", TYPE, "10000", "0.0001", false)
 	if err != nil {
 		log.Printf("Failed to place order: %s", err)
 	} else {
