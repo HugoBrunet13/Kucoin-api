@@ -125,19 +125,24 @@ func main() {
 	if err != nil {
 		log.Printf("ERROR: %s", err)
 	}
+	log.Printf("orderbook: %v", orderbook)
 
 	// 3. Get buy price from orderbook
 	buyPrice := getBuyPrice(10, orderbook)
 
+	log.Printf("buy price: %s", buyPrice)
 	// 4. If buy price is null, use default price
 	if buyPrice == "" {
 		buyPrice = "0.0005" // XXXX
 	}
 
-	// Compute Buy Qty (need to have price in float not as string)
+	// Compute Buy Qty
 	buyPriceFloat, err := strconv.ParseFloat(buyPrice, 32)
-	buyQty := 200 / buyPriceFloat
+	buyQty := 200.0 / buyPriceFloat
 
+	log.Printf("buy qty: %s", int64(buyQty))
+
+	/**
 	// BUY --> Delay
 	buyOrder, err := placeOrder("SHIB-USDT", "buy", "limit", buyQty.toString(), buyPrice, true)
 	if err != nil {
@@ -145,6 +150,8 @@ func main() {
 	} else {
 		log.Printf("Order placed! Order-id: %s", buyOrder)
 	}
+
+	//Derive BUY price and BUY quantity to get Sell price and Sell quantity
 
 	//SELL 1
 	sellOrder1, err := placeOrder("SHIB-USDT", "sell", "limit", "10000", "0.0001", false)
@@ -177,5 +184,7 @@ func main() {
 	} else {
 		log.Printf("Order placed! Order-id: %s", sellOrder4)
 	}
+
+	**/
 
 }
