@@ -109,48 +109,65 @@ func init() {
 
 func main() {
 
-	SYMBOL := "SHIB-USDT" // XXX Put in config?
-	// TYPE := "limmit"
+	SYMBOL := "FTG-USDT" // XXX Put in config?
+	TYPE := "limit"
+
+	INITIAL_AMOUNT := 200.0
+	DP := 3 // XXX
+	DEFAULT_PRICE := 0.055
 
 	// 1. Wait until market open
 	startTime := viper.GetString("targetTime")
 	wait(startTime)
 
 	// 2. Get orderbook
-	orderbook, err := getOrderbook(SYMBOL, 20)
+	orderbook, err := getOrderbook(SYMBOL, 100)
 	if err != nil {
 		log.Printf("ERROR: %s", err)
 	}
 	log.Printf("orderbook: %v", orderbook)
 
 	// 3. Get buy price from orderbook
-	buyPrice := getBuyPrice(10, orderbook)
+	buyPrice := getBuyPrice(50, orderbook)
 
-	log.Printf("buy price: %s", buyPrice)
 	// 4. If buy price is null, use default price
+
 	if buyPrice == "" {
-		buyPrice = "0.0005" // XXXX
+		buyPrice = strconv.FormatFloat(DEFAULT_PRICE, 'f', DP, 64)
 	}
 
-	// Compute Buy Qty
 	buyPriceFloat, err := strconv.ParseFloat(buyPrice, 32)
-	buyQty := 200.0 / buyPriceFloat
+	if (buyPriceFloat - DEFAULT_PRICE) > (DEFAULT_PRICE / 2) {
+		buyPrice = strconv.FormatFloat(DEFAULT_PRICE, 'f', DP, 64)
+		buyPriceFloat, err = strconv.ParseFloat(buyPrice, 32)
+	}
 
-	log.Printf("buy qty: %s", int64(buyQty))
+	log.Printf("buy price: %s", buyPrice)
 
-	/**
+	// Compute Buy Qty
+	qtyBuy := int(INITIAL_AMOUNT / buyPriceFloat)
+
+	log.Printf("INITAL AMOUNT: %s  buyPriceFloat: %s", INITIAL_AMOUNT, buyPriceFloat)
+	log.Printf("buy qty: %s", qtyBuy)
+
 	// BUY --> Delay
-	buyOrder, err := placeOrder(SYMBOL, "buy", TYPE, buyQty.toString(), buyPrice, true)
+	buyOrder, err := placeOrder(SYMBOL, "buy", TYPE, strconv.Itoa(qtyBuy), buyPrice, false)
 	if err != nil {
 		log.Printf("Failed to place order: %s", err)
 	} else {
 		log.Printf("Order placed! Order-id: %s", buyOrder)
 	}
 
-	//Derive BUY price and BUY quantity to get Sell price and Sell quantity
+	// // wait 500 miliecond ?
+	time.Sleep(500 * time.Millisecond)
 
 	//SELL 1
-	sellOrder1, err := placeOrder(SYMBOL, "sell", TYPE, "10000", "0.0001", false)
+	qtySell1 := int(float64(qtyBuy) * 0.25)
+	priceSell1 := buyPriceFloat * 4
+
+	log.Printf("PriceSell1: %s", priceSell1)
+
+	sellOrder1, err := placeOrder(SYMBOL, "sell", TYPE, strconv.Itoa(qtySell1), strconv.FormatFloat(priceSell1, 'f', DP, 64), false)
 	if err != nil {
 		log.Printf("Failed to place order: %s", err)
 	} else {
@@ -158,7 +175,10 @@ func main() {
 	}
 
 	// SELL 2
-	sellOrder2, err := placeOrder(SYMBOL, "sell", TYPE, "10000", "0.0001", false)
+	qtySell2 := int(float64(qtyBuy) * 0.20)
+	priceSell2 := buyPriceFloat * 10
+
+	sellOrder2, err := placeOrder(SYMBOL, "sell", TYPE, strconv.Itoa(qtySell2), strconv.FormatFloat(priceSell2, 'f', DP, 64), false)
 	if err != nil {
 		log.Printf("Failed to place order: %s", err)
 	} else {
@@ -166,7 +186,10 @@ func main() {
 	}
 
 	// SELL 3
-	sellOrder3, err := placeOrder(SYMBOL, "sell", TYPE, "10000", "0.0001", false)
+	qtySell3 := int(float64(qtyBuy) * 0.15)
+	priceSell3 := buyPriceFloat * 50
+
+	sellOrder3, err := placeOrder(SYMBOL, "sell", TYPE, strconv.Itoa(qtySell3), strconv.FormatFloat(priceSell3, 'f', DP, 64), false)
 	if err != nil {
 		log.Printf("Failed to place order: %s", err)
 	} else {
@@ -174,13 +197,46 @@ func main() {
 	}
 
 	// SELL 4
-	sellOrder4, err := placeOrder(SYMBOL, "sell", TYPE, "10000", "0.0001", false)
+	qtySell4 := int(float64(qtyBuy) * 0.10)
+	priceSell4 := buyPriceFloat * 100
+
+	sellOrder4, err := placeOrder(SYMBOL, "sell", TYPE, strconv.Itoa(qtySell4), strconv.FormatFloat(priceSell4, 'f', DP, 64), false)
 	if err != nil {
 		log.Printf("Failed to place order: %s", err)
 	} else {
 		log.Printf("Order placed! Order-id: %s", sellOrder4)
 	}
 
-	**/
+	// SELL 5
+	qtySell5 := int(float64(qtyBuy) * 0.13)
+	priceSell5 := buyPriceFloat * 1000
 
+	sellOrder5, err := placeOrder(SYMBOL, "sell", TYPE, strconv.Itoa(qtySell5), strconv.FormatFloat(priceSell5, 'f', DP, 64), false)
+	if err != nil {
+		log.Printf("Failed to place order: %s", err)
+	} else {
+		log.Printf("Order placed! Order-id: %s", sellOrder5)
+	}
+
+	// SELL 6
+	qtySell6 := int(float64(qtyBuy) * 0.12)
+	priceSell6 := buyPriceFloat * 1800
+
+	sellOrder6, err := placeOrder(SYMBOL, "sell", TYPE, strconv.Itoa(qtySell6), strconv.FormatFloat(priceSell6, 'f', DP, 64), false)
+	if err != nil {
+		log.Printf("Failed to place order: %s", err)
+	} else {
+		log.Printf("Order placed! Order-id: %s", sellOrder6)
+	}
+
+	// SELL 7
+	qtySell7 := int(float64(qtyBuy) * 0.05)
+	priceSell7 := buyPriceFloat * 18000
+
+	sellOrder7, err := placeOrder(SYMBOL, "sell", TYPE, strconv.Itoa(qtySell7), strconv.FormatFloat(priceSell7, 'f', DP, 64), false)
+	if err != nil {
+		log.Printf("Failed to place order: %s", err)
+	} else {
+		log.Printf("Order placed! Order-id: %s", sellOrder7)
+	}
 }
