@@ -76,7 +76,19 @@ func placeOrder(symbol string, side string, orderType string, size string, price
 		return "", errParse
 	}
 	return orderResult.OrderId, nil
+}
 
+func placeOrderMulti(orders []*kucoin.CreateOrderModel, symbol string) {
+	rsp, err := session.CreateMultiOrder(symbol, orders)
+	if err != nil {
+		log.Printf("Failed to Place Muliple Order %s", err)
+	}
+	r := &kucoin.CreateMultiOrderResultModel{}
+	if err := rsp.ReadData(r); err != nil {
+		log.Printf("Failed to Parse Muliple Order reponse%s", err)
+	}
+	log.Print("multiple resp: %v", r)
+	// r[0].OrderId
 }
 
 func loadConfig(config_path string) {
@@ -107,138 +119,168 @@ func init() {
 	)
 }
 
-func main() {
+func getPriceFromOrderbookThenSendOrder(symbol string, depth int64, askLevel int64, defaultPrice float64, orderType string, dp int, amount float64) {
 
-	SYMBOL := "XTM-USDT" // XXX Put in config?
-	TYPE := "limit"
+	orderbook, err := getOrderbook(symbol, depth) // XXX
+	if err != nil {
+		log.Printf("ERROR: %s", err)
+	}
+	log.Printf("orderbook: %v", orderbook)
 
-	INITIAL_AMOUNT := 150.0
-	DP := 2 // XXX
-	DEFAULT_PRICE := 1.1
-
-	// // 1. Wait until market open
-	// startTime := viper.GetString("targetTime")
-	// wait(startTime)
-
-	// // 2. Get orderbook
-	// orderbook, err := getOrderbook(SYMBOL, 100)
-	// if err != nil {
-	// 	log.Printf("ERROR: %s", err)
-	// }
-	// log.Printf("orderbook: %v", orderbook)
-
-	// // 3. Get buy price from orderbook
-	// buyPrice := getBuyPrice(50, orderbook)
-
-	buyPrice := ""
-
-	// 4. If buy price is null, use default price
+	buyPrice := getBuyPrice(10, orderbook)
 
 	if buyPrice == "" {
-		buyPrice = strconv.FormatFloat(DEFAULT_PRICE, 'f', DP, 64)
+		buyPrice = strconv.FormatFloat(defaultPrice, 'f', dp, 64)
 	}
 
 	buyPriceFloat, err := strconv.ParseFloat(buyPrice, 32)
-	if (buyPriceFloat - DEFAULT_PRICE) > (DEFAULT_PRICE / 2) {
-		buyPrice = strconv.FormatFloat(DEFAULT_PRICE, 'f', DP, 64)
-		buyPriceFloat, err = strconv.ParseFloat(buyPrice, 32)
-	}
-
-	log.Printf("buy price: %s", buyPrice)
 
 	// Compute Buy Qty
-	qtyBuy := int(INITIAL_AMOUNT / buyPriceFloat)
+	qtyBuy := int(amount / buyPriceFloat)
 
-	log.Printf("INITAL AMOUNT: %s  buyPriceFloat: %s", INITIAL_AMOUNT, buyPriceFloat)
-	log.Printf("buy qty: %s", qtyBuy)
+	log.Printf("Initial amt avail 2: %s  Buy Price: %s buy qty: %d", amount, buyPrice, qtyBuy)
 
 	// BUY --> Delay
-	buyOrder, err := placeOrder(SYMBOL, "buy", TYPE, strconv.Itoa(qtyBuy), buyPrice, true)
+	buyOrder, err := placeOrder(symbol, "buy", orderType, strconv.Itoa(qtyBuy), buyPrice, false)
+	if err != nil {
+		log.Printf("Failed to place order: %s", err)
+	} else {
+		log.Printf("Order placed! Order-id: %s", buyOrder)
+	}
+}
+
+func getBalance(token, balanceType string) string {
+	rsp, err := session.Accounts(token, balanceType)
+	if err != nil {
+		log.Printf("Failed to get balances: %s", err)
+	}
+	cl := kucoin.AccountsModel{}
+	if err := rsp.ReadData(&cl); err != nil {
+		log.Printf("Failed to parse balances: %s", err)
+	}
+	return cl[0].Balance
+}
+
+func main() {
+
+	SYMBOL := "SHIB-USDT"
+	TYPE := "LIMIT" // order type to send
+	TOKEN := "SHIB"
+
+	INITIAL_AMOUNT1 := 0.27 // For Buy order 1
+	INITIAL_AMOUNT2 := 0.27 // For Buy order 2
+
+	ORDERBOOK_DEPTH := int64(100)
+	ASK_LEVEL := int64(70)
+
+	DP := 8 // Decimal
+	DEFAULT_PRICE := 0.00005
+
+	// { % of quantity, x of avg fill price}
+	SELL_ORDER_BATCH_1 := [][]float64{
+		{0.25, 4},
+		{0.25, 8},
+		{0.15, 12},
+		{0.15, 25},
+		{0.03, 27},
+	}
+
+	//{ % of quantity, x of avg fill price}
+	SELL_ORDER_BATCH_2 := [][]float64{
+		{0.1, 1000},
+		{0.05, 1800},
+		{0.02, 18000},
+	}
+	// // 1. Wait until market open
+	startTime := viper.GetString("targetTime")
+	wait(startTime)
+
+	// 1. Get orderbook price and send order
+	go getPriceFromOrderbookThenSendOrder(SYMBOL, ORDERBOOK_DEPTH, ASK_LEVEL, DEFAULT_PRICE, TYPE, DP, INITIAL_AMOUNT2)
+
+	// 2. Send buy order with default price
+	buyPrice := strconv.FormatFloat(DEFAULT_PRICE, 'f', DP, 64)
+	buyPriceFloat, err := strconv.ParseFloat(buyPrice, 32)
+
+	// Compute Buy Qty
+	qtyBuy := int(INITIAL_AMOUNT1 / buyPriceFloat)
+
+	log.Printf("Initial amt avail : %f  Buy Price: %s buy qty: %d", INITIAL_AMOUNT1, buyPrice, qtyBuy)
+
+	// BUY --> Delay
+	buyOrder, err := placeOrder(SYMBOL, "buy", TYPE, strconv.Itoa(qtyBuy), buyPrice, false)
 	if err != nil {
 		log.Printf("Failed to place order: %s", err)
 	} else {
 		log.Printf("Order placed! Order-id: %s", buyOrder)
 	}
 
-	// // wait 500 miliecond ?
-	time.Sleep(500 * time.Millisecond)
+	// // wait 1000 miliecond ?
+	time.Sleep(1000 * time.Millisecond)
 
-	//SELL 1
-	qtySell1 := int(float64(qtyBuy) * 0.5)
-	priceSell1 := buyPriceFloat * 4
+	// Get balances token
+	balanceToken := getBalance(TOKEN, "trade")
+	// Get balances token
+	balanceUsdt := getBalance("USDT", "trade")
 
-	log.Printf("PriceSell1: %s", priceSell1)
-
-	sellOrder1, err := placeOrder(SYMBOL, "sell", TYPE, strconv.Itoa(qtySell1), strconv.FormatFloat(priceSell1, 'f', DP, 64), false)
-	if err != nil {
-		log.Printf("Failed to place order: %s", err)
-	} else {
-		log.Printf("Order placed! Order-id: %s", sellOrder1)
+	if balanceToken == "" {
+		balanceToken = "200" //XXX
+	}
+	if balanceUsdt == "" {
+		balanceUsdt = "2" //XXX
 	}
 
-	// SELL 2
-	qtySell2 := int(float64(qtyBuy) * 0.30)
-	priceSell2 := buyPriceFloat * 10
+	balanceTokenFloat, err := strconv.ParseFloat(balanceToken, 32)
+	log.Printf("Balance Token: %s", balanceToken)
 
-	sellOrder2, err := placeOrder(SYMBOL, "sell", TYPE, strconv.Itoa(qtySell2), strconv.FormatFloat(priceSell2, 'f', DP, 64), false)
-	if err != nil {
-		log.Printf("Failed to place order: %s", err)
-	} else {
-		log.Printf("Order placed! Order-id: %s", sellOrder2)
+	balanceUsdtFloat, err := strconv.ParseFloat(balanceUsdt, 32)
+	log.Printf("Balance USDT: %s", balanceUsdt)
+
+	filledAmt := (INITIAL_AMOUNT1 + INITIAL_AMOUNT2) - balanceUsdtFloat
+	log.Printf("filled amt: %f", filledAmt)
+
+	//filledAmt/baktoken
+	avgFilledPrice := DEFAULT_PRICE // XXX TODO
+
+	log.Printf("Avg filled price: %f", avgFilledPrice)
+
+	// Send first batch
+
+	batchOrders1 := make([]*kucoin.CreateOrderModel, 0, len(SELL_ORDER_BATCH_1))
+
+	for i := 0; i < len(SELL_ORDER_BATCH_1); i++ {
+		qtySell := int(balanceTokenFloat * SELL_ORDER_BATCH_1[i][0])
+		priceSell := avgFilledPrice * SELL_ORDER_BATCH_1[i][1]
+		sellOrder := &kucoin.CreateOrderModel{
+			ClientOid: kucoin.IntToString(time.Now().UnixNano() + int64(i)),
+			Side:      "sell",
+			Price:     strconv.FormatFloat(priceSell, 'f', DP, 64),
+			Size:      strconv.Itoa(qtySell),
+		}
+		log.Printf("OrderId: %s Qty Sell : %d  Price Sell : %f", sellOrder.ClientOid, qtySell, priceSell)
+		batchOrders1 = append(batchOrders1, sellOrder)
 	}
+	placeOrderMulti(batchOrders1, SYMBOL)
 
-	// SELL 3
-	qtySell3 := int(float64(qtyBuy) * 0.20)
-	priceSell3 := buyPriceFloat * 100
+	// // wait 10 second ?
+	time.Sleep(10 * time.Second)
 
-	sellOrder3, err := placeOrder(SYMBOL, "sell", TYPE, strconv.Itoa(qtySell3), strconv.FormatFloat(priceSell3, 'f', DP, 64), false)
-	if err != nil {
-		log.Printf("Failed to place order: %s", err)
-	} else {
-		log.Printf("Order placed! Order-id: %s", sellOrder3)
+	// Send batch 2
+	// Send first batch
+
+	batchOrders2 := make([]*kucoin.CreateOrderModel, 0, len(SELL_ORDER_BATCH_2))
+
+	for i := 0; i < len(SELL_ORDER_BATCH_2); i++ {
+		qtySell := int(balanceTokenFloat * SELL_ORDER_BATCH_2[i][0])
+		priceSell := avgFilledPrice * SELL_ORDER_BATCH_2[i][1]
+		sellOrder := &kucoin.CreateOrderModel{
+			ClientOid: kucoin.IntToString(time.Now().UnixNano() + int64(i)),
+			Side:      "sell",
+			Price:     strconv.FormatFloat(priceSell, 'f', DP, 64),
+			Size:      strconv.Itoa(qtySell),
+		}
+		log.Printf("OrderId: %s Qty Sell : %d  Price Sell : %f", sellOrder.ClientOid, qtySell, priceSell)
+		batchOrders2 = append(batchOrders2, sellOrder)
 	}
-
-	// // SELL 4
-	// qtySell4 := int(float64(qtyBuy) * 0.10)
-	// priceSell4 := buyPriceFloat * 100
-
-	// sellOrder4, err := placeOrder(SYMBOL, "sell", TYPE, strconv.Itoa(qtySell4), strconv.FormatFloat(priceSell4, 'f', DP, 64), false)
-	// if err != nil {
-	// 	log.Printf("Failed to place order: %s", err)
-	// } else {
-	// 	log.Printf("Order placed! Order-id: %s", sellOrder4)
-	// }
-
-	// // SELL 5
-	// qtySell5 := int(float64(qtyBuy) * 0.13)
-	// priceSell5 := buyPriceFloat * 1000
-
-	// sellOrder5, err := placeOrder(SYMBOL, "sell", TYPE, strconv.Itoa(qtySell5), strconv.FormatFloat(priceSell5, 'f', DP, 64), false)
-	// if err != nil {
-	// 	log.Printf("Failed to place order: %s", err)
-	// } else {
-	// 	log.Printf("Order placed! Order-id: %s", sellOrder5)
-	// }
-
-	// // SELL 6
-	// qtySell6 := int(float64(qtyBuy) * 0.12)
-	// priceSell6 := buyPriceFloat * 1800
-
-	// sellOrder6, err := placeOrder(SYMBOL, "sell", TYPE, strconv.Itoa(qtySell6), strconv.FormatFloat(priceSell6, 'f', DP, 64), false)
-	// if err != nil {
-	// 	log.Printf("Failed to place order: %s", err)
-	// } else {
-	// 	log.Printf("Order placed! Order-id: %s", sellOrder6)
-	// }
-
-	// // SELL 7
-	// qtySell7 := int(float64(qtyBuy) * 0.05)
-	// priceSell7 := buyPriceFloat * 18000
-
-	// sellOrder7, err := placeOrder(SYMBOL, "sell", TYPE, strconv.Itoa(qtySell7), strconv.FormatFloat(priceSell7, 'f', DP, 64), false)
-	// if err != nil {
-	// 	log.Printf("Failed to place order: %s", err)
-	// } else {
-	// 	log.Printf("Order placed! Order-id: %s", sellOrder7)
-	// }
+	placeOrderMulti(batchOrders2, SYMBOL)
 }
